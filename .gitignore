@@ -1,0 +1,14 @@
+node_modules/
+frontend/dist/
+/backend/data.db
+/backend/*.db
+dist/
+*.log
+.DS_Store
+.history
+
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
