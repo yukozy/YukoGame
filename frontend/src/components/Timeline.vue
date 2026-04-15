@@ -51,12 +51,12 @@ export default {
 
 <style scoped>
 .timeline {
-  padding: 0 16px 100px;
+  padding: 0 0 100px;
 }
 
 .empty-state {
   margin: 24px 0;
-  color: #666;
+  color: #64748b;
   text-align: center;
   font-size: 14px;
 }
@@ -70,7 +70,7 @@ export default {
 
 .timeline-marker {
   position: relative;
-  width: 24px;
+  width: 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -88,15 +88,16 @@ export default {
   flex: 1;
   width: 2px;
   margin-top: 4px;
-  background: #dbeafe;
+  background: rgba(37, 99, 235, 0.18);
 }
 
 .event-card {
   flex: 1;
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 14px 16px;
-  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 20px;
+  padding: 18px 16px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  backdrop-filter: blur(12px);
 }
 
 .event-meta {
@@ -129,16 +130,16 @@ export default {
 }
 
 .event-title {
-  margin-top: 10px;
+  margin-top: 12px;
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
 }
 
 .event-description {
-  margin-top: 8px;
+  margin-top: 10px;
   color: #475569;
-  line-height: 1.5;
+  line-height: 1.6;
   font-size: 14px;
 }
 </style>
