@@ -1,90 +1,92 @@
 <template>
   <div class="page-shell">
     <van-nav-bar
-      title="Time Online"
+      title="周计划"
       class="page-navbar"
       left-text="☰"
       right-text="👤"
       @click-left="showDrawer = true"
       @click-right="showUserPopup = true"
     />
-    <section class="page-panel">
-      <van-field
-        label="日期"
-        is-link
-        readonly
-        clickable
-        v-model="selectedDate"
-        @click="openDatePicker"
-      />
-
-      <div class="info-line">
-        <span>今日事件</span>
-        <small>{{ loadingText || `${events.length} 个事件` }}</small>
+    <section class="page-panel weekly-panel">
+      <div class="plan-header">
+        <div>
+          <h2>每周待办</h2>
+          <p>按天管理你的任务，并点击完成切换状态。</p>
+        </div>
+        <van-button type="primary" size="small" @click="showTaskForm = true"
+          >新增待办</van-button
+        >
       </div>
 
-      <Timeline :events="events" @edit="openEditForm" @delete="removeEvent" />
+      <div class="day-tabs">
+        <button
+          v-for="day in days"
+          :key="day"
+          :class="['day-tab', { active: day === activeDay }]"
+          @click="activeDay = day"
+        >
+          {{ day }}
+        </button>
+      </div>
+
+      <div class="task-list">
+        <div v-if="activeTasks.length">
+          <div v-for="task in activeTasks" :key="task.id" class="task-item">
+            <button
+              class="task-mark"
+              :class="{ done: task.done }"
+              @click="toggleTask(task)"
+            >
+              {{ task.done ? "✔" : "待" }}
+            </button>
+            <div class="task-content">
+              <p :class="{ completed: task.done }">{{ task.text }}</p>
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-state">
+          当前日暂无待办，点击“新增待办”开始添加。
+        </div>
+      </div>
     </section>
 
-    <van-button
-      round
-      block
-      type="primary"
-      class="fab-button"
-      @click="openAddForm"
-    >
-      添加事件
-    </van-button>
-
     <van-popup
-      v-model:show="showForm"
+      v-model:show="showTaskForm"
       position="bottom"
       round
-      class="form-popup"
+      class="task-form-popup"
     >
       <div class="form-panel">
         <div class="form-header">
-          <h3>{{ editMode ? "编辑事件" : "添加事件" }}</h3>
-          <van-button plain type="danger" size="small" @click="closeForm"
+          <h3>新增待办</h3>
+          <van-button
+            plain
+            type="danger"
+            size="small"
+            @click="showTaskForm = false"
             >取消</van-button
           >
         </div>
-
+        <van-field label="日期" readonly v-model="activeDay" />
         <van-field
-          label="时间"
-          v-model="form.time"
-          placeholder="请选择时间"
-          type="time"
-          required
+          v-model="taskText"
+          label="内容"
+          placeholder="请输入待办事项"
+          clearable
         />
-
-        <van-field
-          label="标题"
-          v-model="form.title"
-          placeholder="输入事件标题"
-          required
-        />
-
-        <van-field
-          label="描述"
-          type="textarea"
-          v-model="form.description"
-          placeholder="可选描述"
-          autosize
-        />
-
-        <van-button
-          type="primary"
-          block
-          class="submit-button"
-          @click="submitForm"
-        >
-          {{ editMode ? "保存修改" : "确认添加" }}
+        <van-button type="primary" block class="submit-button" @click="addTask">
+          添加待办
         </van-button>
       </div>
     </van-popup>
 
-    <van-popup v-model:show="showUserPopup" position="top" round>
+    <van-popup
+      v-model:show="showUserPopup"
+      position="top"
+      round
+      class="user-popup"
+    >
       <div class="user-panel">
         <div class="user-info">
           <div class="user-avatar">
@@ -100,12 +102,12 @@
         >
       </div>
     </van-popup>
+
     <van-popup
       v-model:show="showDrawer"
       position="left"
       class="drawer-popup"
       style="height: 100%; width: 70%"
-      round
     >
       <div class="drawer-panel drawer-full-height">
         <div class="drawer-sidebar-header">
@@ -142,36 +144,74 @@
         </div>
       </div>
     </van-popup>
-    <van-popup v-model:show="showDatePicker" position="bottom">
-      <van-date-picker
-        v-model="datePickerValue"
-        :min-date="new Date('2020-01-01')"
-        :max-date="new Date()"
-        @confirm="confirmDate"
-        @cancel="showDatePicker = false"
-      />
-    </van-popup>
   </div>
 </template>
 
 <script>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/authStore";
-import Timeline from "../components/Timeline.vue";
-import eventMixin from "../mixins/eventMixin";
+import { showToast } from "vant";
 
 export default {
-  name: "IndexPage",
-  components: {
-    Timeline,
-  },
-  mixins: [eventMixin],
+  name: "WeeklyPlanPage",
   setup() {
     const authStore = useAuthStore();
     const router = useRouter();
     const showDrawer = ref(false);
     const showUserPopup = ref(false);
+    const showTaskForm = ref(false);
+    const days = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+    const activeDay = ref(days[0]);
+    const taskText = ref("");
+    const tasks = ref({});
+
+    const storageKey = computed(
+      () => `weekly-tasks-${authStore.user?.username || "guest"}`
+    );
+
+    const defaultTasks = () => {
+      return days.reduce((result, day) => {
+        result[day] = [];
+        return result;
+      }, {});
+    };
+
+    const loadTasks = () => {
+      const raw = localStorage.getItem(storageKey.value);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        tasks.value = { ...defaultTasks(), ...parsed };
+      } else {
+        tasks.value = defaultTasks();
+      }
+    };
+
+    const saveTasks = () => {
+      localStorage.setItem(storageKey.value, JSON.stringify(tasks.value));
+    };
+
+    const activeTasks = computed(() => tasks.value[activeDay.value] || []);
+
+    const addTask = () => {
+      if (!taskText.value.trim()) {
+        showToast({ type: "fail", message: "请输入待办内容" });
+        return;
+      }
+      tasks.value[activeDay.value].push({
+        id: Date.now(),
+        text: taskText.value.trim(),
+        done: false,
+      });
+      taskText.value = "";
+      showTaskForm.value = false;
+      saveTasks();
+    };
+
+    const toggleTask = (task) => {
+      task.done = !task.done;
+      saveTasks();
+    };
 
     const logout = () => {
       authStore.logout();
@@ -192,12 +232,20 @@ export default {
       router.push("/weekly");
     };
 
+    loadTasks();
+
     return {
-      logout,
       authStore,
       showDrawer,
       showUserPopup,
-      closeDrawer,
+      showTaskForm,
+      days,
+      activeDay,
+      taskText,
+      activeTasks,
+      addTask,
+      toggleTask,
+      logout,
       goToIndex,
       goToWeekly,
     };
@@ -233,44 +281,112 @@ export default {
   backdrop-filter: blur(24px);
 }
 
-.info-line {
+.weekly-panel h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.plan-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 0 6px;
-  color: #334155;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.plan-header p {
+  margin: 4px 0 0;
+  color: #64748b;
   font-size: 14px;
 }
 
-.fab-button {
-  position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 18px;
-  width: calc(100% - 32px);
-  max-width: 520px;
-  border-radius: 999px;
+.day-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
-.form-popup {
-  padding: 0 16px;
+.day-tab {
+  flex: 1 1 calc(33.333% - 10px);
+  min-width: 92px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 18px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.86);
+  color: #475569;
+  font-weight: 600;
+}
+
+.day-tab.active {
+  border-color: #7c3aed;
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.08);
+}
+
+.task-list {
+  display: grid;
+  gap: 12px;
+}
+
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.task-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #fff;
+  color: #334155;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.task-mark.done {
+  background: #7c3aed;
+  color: #fff;
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.task-content p {
+  margin: 0;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.task-content p.completed {
+  color: #94a3b8;
+  text-decoration: line-through;
+}
+
+.empty-state {
+  text-align: center;
+  color: #64748b;
+  padding: 32px 0;
 }
 
 .form-panel {
-  padding: 18px 0 24px;
+  padding: 18px 16px 22px;
 }
 
 .form-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .form-header h3 {
   margin: 0;
   font-size: 18px;
-  font-weight: 700;
 }
 
 .submit-button {
@@ -387,6 +503,7 @@ export default {
 }
 
 .drawer-full-height {
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;

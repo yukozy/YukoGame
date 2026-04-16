@@ -16,13 +16,13 @@ const findUserByUsername = db.prepare(
 router.post('/register', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ error: 'Missing required fields: username, password' });
+    return res.status(400).json({ error: '用户名和密码不能为空' });
   }
 
   try {
     const existing = findUserByUsername.get(username);
     if (existing) {
-      return res.status(400).json({ error: 'Username already exists' });
+      return res.status(400).json({ error: '用户名已存在' });
     }
 
     const hashed = bcrypt.hashSync(password, 10);
@@ -34,7 +34,7 @@ router.post('/register', async (req, res) => {
     res.status(201).json({ token, user: { id: result.lastInsertRowid, username } });
   } catch (error) {
     console.error('Failed to register user', error);
-    res.status(500).json({ error: 'Failed to register user' });
+    res.status(500).json({ error: '注册失败，请稍后再试' });
   }
 });
 
@@ -47,12 +47,12 @@ router.post('/login', (req, res) => {
   try {
     const user = findUserByUsername.get(username);
     if (!user) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: '用户名或密码错误' });
     }
 
     const passwordMatches = bcrypt.compareSync(password, user.password);
     if (!passwordMatches) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: '用户名或密码错误' });
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, {
@@ -61,7 +61,7 @@ router.post('/login', (req, res) => {
     res.json({ token, user: { id: user.id, username: user.username } });
   } catch (error) {
     console.error('Failed to login user', error);
-    res.status(500).json({ error: 'Failed to login user' });
+    res.status(500).json({ error: '登录失败，请稍后再试' });
   }
 });
 

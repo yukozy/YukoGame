@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import IndexPage from '../views/IndexPage.vue';
 import LoginPage from '../views/LoginPage.vue';
 import RegisterPage from '../views/RegisterPage.vue';
+import WeeklyPlanPage from '../views/WeeklyPlanPage.vue';
 
 const routes = [
   {
@@ -22,6 +23,12 @@ const routes = [
     path: '/index',
     name: 'IndexPage',
     component: IndexPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/weekly',
+    name: 'WeeklyPlanPage',
+    component: WeeklyPlanPage,
     meta: { requiresAuth: true },
   },
   {

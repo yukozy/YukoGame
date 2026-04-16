@@ -133,7 +133,8 @@ export default {
       this.showDatePicker = true;
     },
     confirmDate(value) {
-      this.selectedDate = value.join('-');
+      console.log('Selected date:', value);
+      this.selectedDate = value.selectedValues.join('-');
       this.showDatePicker = false;
     },
   },
