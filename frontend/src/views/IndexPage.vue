@@ -1,89 +1,20 @@
 <template>
   <div class="page-shell">
     <van-nav-bar
-      title="Time Online"
+      :title="localPage"
       class="page-navbar"
-      left-text="☰"
-      right-text="👤"
       @click-left="showDrawer = true"
       @click-right="showUserPopup = true"
-    />
-    <section class="page-panel">
-      <van-field
-        label="日期"
-        is-link
-        readonly
-        clickable
-        v-model="selectedDate"
-        @click="openDatePicker"
-      />
-
-      <div class="info-line">
-        <span>今日事件</span>
-        <small>{{ loadingText || `${events.length} 个事件` }}</small>
-      </div>
-
-      <Timeline :events="events" @edit="openEditForm" @delete="removeEvent" />
-    </section>
-
-    <van-button
-      round
-      block
-      type="primary"
-      class="fab-button"
-      @click="openAddForm"
     >
-      添加事件
-    </van-button>
-
-    <van-popup
-      v-model:show="showForm"
-      position="bottom"
-      round
-      class="form-popup"
-    >
-      <div class="form-panel">
-        <div class="form-header">
-          <h3>{{ editMode ? "编辑事件" : "添加事件" }}</h3>
-          <van-button plain type="danger" size="small" @click="closeForm"
-            >取消</van-button
-          >
-        </div>
-
-        <van-field
-          label="时间"
-          v-model="form.time"
-          placeholder="请选择时间"
-          type="time"
-          required
-        />
-
-        <van-field
-          label="标题"
-          v-model="form.title"
-          placeholder="输入事件标题"
-          required
-        />
-
-        <van-field
-          label="描述"
-          type="textarea"
-          v-model="form.description"
-          placeholder="可选描述"
-          autosize
-        />
-
-        <van-button
-          type="primary"
-          block
-          class="submit-button"
-          @click="submitForm"
-        >
-          {{ editMode ? "保存修改" : "确认添加" }}
-        </van-button>
-      </div>
-    </van-popup>
-
+      <template #left>
+        <van-icon name="bars" size="20" />
+      </template>
+      <template #right>
+        <van-icon name="user" size="20" />
+      </template>
+    </van-nav-bar>
+    <DailyPlanPage v-if="localPage == 'daily'"></DailyPlanPage>
+    <WeeklyPlanPage v-if="localPage == 'weekly'"></WeeklyPlanPage>
     <van-popup v-model:show="showUserPopup" position="top" round>
       <div class="user-panel">
         <div class="user-info">
@@ -142,15 +73,6 @@
         </div>
       </div>
     </van-popup>
-    <van-popup v-model:show="showDatePicker" position="bottom">
-      <van-date-picker
-        v-model="datePickerValue"
-        :min-date="new Date('2020-01-01')"
-        :max-date="new Date()"
-        @confirm="confirmDate"
-        @cancel="showDatePicker = false"
-      />
-    </van-popup>
   </div>
 </template>
 
@@ -160,11 +82,15 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "../stores/authStore";
 import Timeline from "../components/Timeline.vue";
 import eventMixin from "../mixins/eventMixin";
+import DailyPlanPage from "./DailyPlanPage.vue";
+import WeeklyPlanPage from "./WeeklyPlanPage.vue";
 
 export default {
   name: "IndexPage",
   components: {
     Timeline,
+    DailyPlanPage,
+    WeeklyPlanPage,
   },
   mixins: [eventMixin],
   setup() {
@@ -172,6 +98,8 @@ export default {
     const router = useRouter();
     const showDrawer = ref(false);
     const showUserPopup = ref(false);
+    // daily 时间轴 weekly 周计划
+    const localPage = ref("daily");
 
     const logout = () => {
       authStore.logout();
@@ -184,15 +112,16 @@ export default {
 
     const goToIndex = () => {
       closeDrawer();
-      router.push("/index");
+      localPage.value = "daily";
     };
 
     const goToWeekly = () => {
       closeDrawer();
-      router.push("/weekly");
+      localPage.value = "weekly";
     };
 
     return {
+      localPage,
       logout,
       authStore,
       showDrawer,
@@ -207,7 +136,6 @@ export default {
 
 <style scoped>
 .page-shell {
-  min-height: 100vh;
   background: linear-gradient(
     180deg,
     rgba(255, 255, 255, 0.88),

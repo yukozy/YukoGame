@@ -1,6 +1,6 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
-import { Button, Field, Popup, Dialog, NavBar, DatePicker } from 'vant';
+import { Button, Field, Popup, Dialog, NavBar, DatePicker, Icon } from 'vant';
 import 'vant/lib/index.css';
 import App from './App.vue';
 import router from './router';
@@ -16,6 +16,7 @@ app.use(Popup);
 app.use(Dialog);
 app.use(NavBar);
 app.use(DatePicker);
+app.use(Icon);
 
 const authStore = useAuthStore();
 authStore.initialize();

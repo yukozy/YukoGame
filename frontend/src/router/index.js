@@ -26,12 +26,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/weekly',
-    name: 'WeeklyPlanPage',
-    component: WeeklyPlanPage,
-    meta: { requiresAuth: true },
-  },
-  {
     path: '/:pathMatch(.*)*',
     redirect: '/index',
   },
